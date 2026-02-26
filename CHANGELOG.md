@@ -5,6 +5,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.1.4] — 2026-02-26
+
+### Fixed
+- Render and Preview commands now run Quarto with the **workspace root** as the
+  working directory instead of the directory containing the `.qmd` file.
+  Previously, running from `analysis/` caused `source("utils/helpers.R")` in the
+  R setup chunk to fail with `cannot open the connection` because the relative
+  path resolved to `analysis/utils/helpers.R` rather than `<project_root>/utils/helpers.R`.
+  `knitr::opts_knit$set(root.dir = ...)` only takes effect for chunks *after* the
+  setup chunk, so Quarto itself must already be running from the project root.
+
 ## [0.1.3] — 2026-02-26
 
 ### Added

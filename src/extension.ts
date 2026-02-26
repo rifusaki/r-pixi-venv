@@ -169,7 +169,11 @@ async function renderQuartoDocument(format?: string) {
             outputChannel.appendLine(`Executing: ${command}`);
             outputChannel.show(true);
 
-            const cwd = path.dirname(document.fileName);
+            // Use the workspace root as cwd so that relative paths in R chunks
+            // (e.g. source("utils/helpers.R")) resolve correctly.
+            // knitr::opts_knit$set(root.dir = ...) only affects chunks *after*
+            // the setup chunk, so quarto must already be running from the root.
+            const cwd = workspaceFolder.uri.fsPath;
 
             const cp = exec(command, { cwd, maxBuffer: 10 * 1024 * 1024 }, (error, stdout, stderr) => {
                 if (error) {
@@ -236,7 +240,8 @@ async function previewQuartoDocument() {
     }
 
     const args = ['preview', document.fileName, '--no-browser'];
-    const cwd = path.dirname(document.fileName);
+    // Use the workspace root as cwd (same reason as renderQuartoDocument).
+    const cwd = workspaceFolder.uri.fsPath;
 
     outputChannel.appendLine(`Starting Preview: "${quartoWrapperPath}" ${args.join(' ')}`);
     outputChannel.show(true);
