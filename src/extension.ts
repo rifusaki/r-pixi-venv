@@ -357,18 +357,20 @@ async function createWrapperScripts(workspacePath: string, envName: string, pref
     const quartoWrapperPath = path.join(vscodeDir, `quarto-pixi-wrapper${wrapperExt}`);
 
     const pixiTomlPath = path.join(workspacePath, 'pixi.toml');
+    const pyprojectTomlPath = path.join(workspacePath, 'pyproject.toml');
+    const manifestPath = fs.existsSync(pixiTomlPath) ? pixiTomlPath : pyprojectTomlPath;
 
     let rScriptContent = '';
     let quartoScriptContent = '';
 
     if (isWindows) {
         // Windows batch script to run via pixi
-        const baseContent = `@echo off\npixi run --manifest-path "${pixiTomlPath}" -e ${envName}`;
+        const baseContent = `@echo off\npixi run --manifest-path "${manifestPath}" -e ${envName}`;
         rScriptContent = `${baseContent} R %*`;
         quartoScriptContent = `${baseContent} quarto %*`;
     } else {
         // Shell script to run via pixi
-        const baseContent = `#!/bin/sh\nexec pixi run --manifest-path "${pixiTomlPath}" -e ${envName}`;
+        const baseContent = `#!/bin/sh\nexec pixi run --manifest-path "${manifestPath}" -e ${envName}`;
         rScriptContent = `${baseContent} R "$@"`;
         quartoScriptContent = `${baseContent} quarto "$@"`;
     }
