@@ -5,6 +5,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.1.3] — 2026-02-26
+
+### Added
+- Setup now writes minimal `conda` and `activate` shims into the pixi env's
+  `bin/` directory (non-Windows only). reticulate 1.45 detects `conda-meta/` in
+  the pixi prefix and tries to activate the env via `conda run`; because pixi
+  ships no `conda` binary, activation fails silently and reticulate falls back to
+  the system Python — which has none of the project packages. The shims satisfy
+  reticulate's `conda_run2_nix` call without requiring a real conda installation.
+  Existing shims are overwritten on each setup run so they stay correct after
+  `pixi install` rebuilds the env.
+
 ## [0.1.2] — 2026-02-26
 
 ### Fixed

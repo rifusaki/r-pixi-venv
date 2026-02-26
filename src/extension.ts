@@ -404,6 +404,46 @@ async function createWrapperScripts(workspacePath: string, envName: string, pref
         ? path.join(prefix, 'lib', 'R', 'bin', 'R.exe')
         : path.join(prefix, 'bin', 'R');
 
+    // Create reticulate conda/activate shims in the pixi env bin directory.
+    // reticulate 1.45 detects conda-meta/ in the pixi prefix and tries to
+    // activate the env via `conda run`.  Pixi has no conda binary, so the
+    // activation fails and reticulate silently falls back to the system Python
+    // (which has none of the project packages).  Two minimal shims satisfy
+    // reticulate's conda_run2_nix call without requiring a real conda install.
+    // These shims are only written on non-Windows (conda shim is not needed
+    // on Windows pixi envs in the same way).
+    if (!isWindows) {
+        const envBin = path.join(prefix, 'bin');
+
+        const condaShimPath = path.join(envBin, 'conda');
+        const condaShimContent = [
+            '#!/bin/sh',
+            '# Minimal conda shim for reticulate compatibility.',
+            '# reticulate calls: conda run --prefix <prefix> python -c "import os; print(os.environ[\'PATH\'])"',
+            '# to resolve the activated PATH. Return prefix/bin prepended to PATH.',
+            'PREFIX=""',
+            'for arg in "$@"; do',
+            '  [ "$prev" = "--prefix" ] || [ "$prev" = "-p" ] && PREFIX=$arg',
+            '  prev=$arg',
+            'done',
+            '[ -n "$PREFIX" ] && echo "${PREFIX}/bin:${PATH}" || echo "${PATH}"',
+            '',
+        ].join('\n');
+        fs.writeFileSync(condaShimPath, condaShimContent);
+        fs.chmodSync(condaShimPath, 0o755);
+        outputChannel.appendLine(`Created conda shim: ${condaShimPath}`);
+
+        const activateShimPath = path.join(envBin, 'activate');
+        const activateShimContent = [
+            '#!/bin/sh',
+            '# Minimal activate shim for reticulate compatibility (no-op for pixi envs).',
+            '',
+        ].join('\n');
+        fs.writeFileSync(activateShimPath, activateShimContent);
+        fs.chmodSync(activateShimPath, 0o755);
+        outputChannel.appendLine(`Created activate shim: ${activateShimPath}`);
+    }
+
     outputChannel.appendLine(`Created wrapper scripts in ${vscodeDir}`);
     outputChannel.appendLine(`R binary path for r.rpath: ${rBinPath}`);
 
