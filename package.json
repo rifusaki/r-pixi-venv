@@ -1,0 +1,87 @@
+{
+  "name": "r-pixi-venv",
+  "displayName": "R Pixi Venv",
+  "description": "Pixi-managed virtual environment for R and Quarto",
+  "version": "0.1.0",
+  "engines": {
+    "vscode": "^1.109.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "workspaceContains:pixi.toml",
+    "workspaceContains:pyproject.toml",
+    "onCommand:r-pixi-venv.setup",
+    "onCommand:r-pixi-venv.installDependencies",
+    "onCommand:r-pixi-venv.renderQuarto",
+    "onCommand:r-pixi-venv.renderQuartoFormat",
+    "onCommand:r-pixi-venv.previewQuarto"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "r-pixi-venv.setup",
+        "title": "Setup R and Quarto from Pixi"
+      },
+      {
+        "command": "r-pixi-venv.installDependencies",
+        "title": "Install R and Quarto to Pixi"
+      },
+      {
+        "command": "r-pixi-venv.renderQuarto",
+        "title": "Pixi: Render Quarto",
+        "icon": "$(play)"
+      },
+      {
+        "command": "r-pixi-venv.renderQuartoFormat",
+        "title": "Pixi: Render Quarto (Select Format)",
+        "icon": "$(list-selection)"
+      },
+      {
+        "command": "r-pixi-venv.previewQuarto",
+        "title": "Pixi: Preview Quarto",
+        "icon": "$(open-preview)"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "r-pixi-venv.renderQuarto",
+          "when": "resourceExtname == .qmd || resourceExtname == .rmd",
+          "group": "navigation@1"
+        },
+        {
+          "command": "r-pixi-venv.renderQuartoFormat",
+          "when": "resourceExtname == .qmd || resourceExtname == .rmd",
+          "group": "navigation@2"
+        },
+        {
+          "command": "r-pixi-venv.previewQuarto",
+          "when": "resourceExtname == .qmd || resourceExtname == .rmd",
+          "group": "navigation@3"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.10",
+    "@types/node": "22.x",
+    "@types/vscode": "^1.109.0",
+    "@vscode/test-cli": "^0.0.12",
+    "@vscode/test-electron": "^2.5.2",
+    "@vscode/vsce": "^3.7.1",
+    "eslint": "^9.39.2",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.54.0"
+  }
+}
