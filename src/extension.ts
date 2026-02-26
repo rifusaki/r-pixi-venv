@@ -352,7 +352,6 @@ async function createWrapperScripts(workspacePath: string, envName: string, pref
     }
 
     const wrapperExt = isWindows ? '.bat' : '.sh';
-    const rWrapperPath = path.join(vscodeDir, `r-pixi-wrapper${wrapperExt}`);
     const rTermWrapperPath = path.join(vscodeDir, `rterm-pixi-wrapper${wrapperExt}`);
     const quartoWrapperPath = path.join(vscodeDir, `quarto-pixi-wrapper${wrapperExt}`);
 
@@ -360,37 +359,56 @@ async function createWrapperScripts(workspacePath: string, envName: string, pref
     const pyprojectTomlPath = path.join(workspacePath, 'pyproject.toml');
     const manifestPath = fs.existsSync(pixiTomlPath) ? pixiTomlPath : pyprojectTomlPath;
 
-    let rScriptContent = '';
+    let rTermScriptContent = '';
     let quartoScriptContent = '';
 
     if (isWindows) {
         // Windows batch script to run via pixi
         const baseContent = `@echo off\npixi run --manifest-path "${manifestPath}" -e ${envName}`;
-        rScriptContent = `${baseContent} R %*`;
+        rTermScriptContent = `${baseContent} R %*`;
         quartoScriptContent = `${baseContent} quarto %*`;
     } else {
         // Shell script to run via pixi
         const baseContent = `#!/bin/sh\nexec pixi run --manifest-path "${manifestPath}" -e ${envName}`;
-        rScriptContent = `${baseContent} R "$@"`;
+        rTermScriptContent = `${baseContent} R "$@"`;
         quartoScriptContent = `${baseContent} quarto "$@"`;
     }
 
-    // Write the files
-    fs.writeFileSync(rWrapperPath, rScriptContent);
-    fs.writeFileSync(rTermWrapperPath, rScriptContent); // Typically the same for our wrapper
+    // rterm wrapper is used for the interactive R terminal (pixi run wraps env setup)
+    fs.writeFileSync(rTermWrapperPath, rTermScriptContent);
     fs.writeFileSync(quartoWrapperPath, quartoScriptContent);
 
     // Make executable on Unix-like systems
     if (!isWindows) {
-        fs.chmodSync(rWrapperPath, 0o755);
         fs.chmodSync(rTermWrapperPath, 0o755);
         fs.chmodSync(quartoWrapperPath, 0o755);
     }
 
+    // Create project-level .pixi-activate.sh if it does not exist.
+    // Pixi looks for this file as a project activation hook; without it pixi run
+    // emits a harmless but noisy WARN on every invocation.
+    const pixiActivatePath = path.join(workspacePath, '.pixi-activate.sh');
+    if (!fs.existsSync(pixiActivatePath)) {
+        fs.writeFileSync(pixiActivatePath, '#!/bin/sh\n# Project-level pixi activation hook (intentionally empty)\n');
+        if (!isWindows) {
+            fs.chmodSync(pixiActivatePath, 0o755);
+        }
+        outputChannel.appendLine(`Created ${pixiActivatePath}`);
+    }
+
+    // r.rpath must be the real R binary, not a shell-script wrapper.
+    // The Quarto VS Code extension reads r.rpath and passes it as QUARTO_R;
+    // Quarto rejects shell scripts there and falls back to the system R,
+    // which does not have the pixi packages installed.
+    const rBinPath = isWindows
+        ? path.join(prefix, 'lib', 'R', 'bin', 'R.exe')
+        : path.join(prefix, 'bin', 'R');
+
     outputChannel.appendLine(`Created wrapper scripts in ${vscodeDir}`);
+    outputChannel.appendLine(`R binary path for r.rpath: ${rBinPath}`);
 
     return {
-        rPath: rWrapperPath,
+        rPath: rBinPath,
         rTermPath: rTermWrapperPath,
         quartoPath: quartoWrapperPath
     };
@@ -420,8 +438,9 @@ async function configureWorkspaceSettings(folder: vscode.WorkspaceFolder, rPath:
     const isWindows = process.platform === 'win32';
     outputChannel.appendLine(`Configuring settings for platform: ${process.platform}`);
     
-    outputChannel.appendLine(`Calculated R Path: ${rPath}`);
-    outputChannel.appendLine(`Calculated Quarto Path: ${quartoPath}`);
+    outputChannel.appendLine(`Calculated R binary path (r.rpath): ${rPath}`);
+    outputChannel.appendLine(`Calculated R term path  (r.rterm): ${rTermPath}`);
+    outputChannel.appendLine(`Calculated Quarto path  (quarto.path): ${quartoPath}`);
 
     const rConfig = vscode.workspace.getConfiguration('r', folder.uri);
     const quartoConfig = vscode.workspace.getConfiguration('quarto', folder.uri);
